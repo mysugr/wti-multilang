@@ -17,6 +17,7 @@ class WtiApi {
     return reset($project);
   }
 
+/*
   public function getFiles() {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, "https://webtranslateit.com/api/projects/" . $this->api_key . "/zip_file");
@@ -41,6 +42,7 @@ class WtiApi {
     krumo($files);
     return $files;
   }
+  */
 
   public function getStrings($page_id = 1, $locale = 'all') {
     //if no locale was given, we retrieve strings for all locales
@@ -75,6 +77,7 @@ class WtiApi {
     return $data;
   }
 
+  /*
   private function prepareTranslationsArray($t, $prefix = '') {
     $result = array();
     if (strlen($prefix) > 0) {
@@ -90,4 +93,19 @@ class WtiApi {
     }
     return $result;
   }
+  */
+  private prepareStrings($strings) {
+    $result = array();
+    foreach ($strings AS $lang => $str) {
+      $result[$lang] = array();
+      foreach ($str AS $segment) {
+        $result[$lang][$segment['key']] = array(
+          'text' => $segment['translations']['text'],
+          'status' => str_replace('status_', '', $segment['translations']['status_']),
+          'version' => $segment['translations']['version'],
+        );
+      }
+    }
+  }
+
 }

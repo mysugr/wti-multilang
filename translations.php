@@ -7,6 +7,7 @@ class WtiTranslations {
 
   }
 
+/*
   public function getTableName() {
     global $wpdb;
     return $wpdb->prefix . 'wti_translations';
@@ -30,4 +31,5 @@ class WtiTranslations {
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($query);
   }
+  */
 }
