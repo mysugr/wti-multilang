@@ -6,6 +6,7 @@
       settings_fields('wtiml');
       do_settings_fields('wti-multilang', 'default');
       do_settings_sections('wti-multilang');
+      print '<input type="hidden" name="wtiml_setup_done" value="' . intval(wti_multilang_setup_done()) . '">';
       submit_button(); ?>
     </form>
   </div>

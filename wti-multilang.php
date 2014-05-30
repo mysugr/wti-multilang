@@ -21,6 +21,7 @@ add_action('rewrite_rules_array', 'wti_multilang_rewrite_rules');
 add_filter('home_url', 'wti_multilang_link_url');
 add_filter('query_vars', 'wti_multilang_query_vars');
 add_action('admin_menu', 'wti_multilang_admin_menu');
+add_action('admin_notices', 'wti_multilang_admin_notices');
 
 function wti_multilang_init() {
   //global $wp_rewrite;
@@ -28,8 +29,11 @@ function wti_multilang_init() {
 }
 
 function wti_multilang_install() {
-  $translations = wti_multilang_translations();
-  update_option('wtiml_schema_version', $translations->getSchemaVersion());
+  update_option('wtiml_languages', array(
+    'default' => 'en',
+    'all' => array(),
+  ));
+  update_option('wtiml_api_key', '');
 }
 
 function wti_multilang_api() {
@@ -52,10 +56,17 @@ function wti_multilang_translations() {
 
 function wti_multilang_admin_init() {
   register_setting('wtiml', 'wtiml_api_key');
+
   //add_settings_section('setup', 'Setup', 'wti_multilang_section_setup', 'wti-multilang');
   add_settings_field('wtiml_api_key', 'Api public key', 'wti_multilang_api_key_field', 'wti-multilang', 'default', array('id' => 'wtiml_api_key'));
   wp_register_style('wtiml-admin-css', plugins_url('css/admin.css', __FILE__));
   wp_enqueue_style('wtiml-admin-css');
+}
+
+function wti_multilang_admin_notices() {
+  if (!wti_multilang_setup_done()) {
+    wti_multilang_message('Please add your WebTranslateIt Api key in the <a href="' . admin_url('admin.php?page=wti-multilang') . '">Wti Multilang Settings</a>', 'update-nag');
+  }
 }
 
 function wti_multilang_query_vars($qv) {
@@ -64,29 +75,22 @@ function wti_multilang_query_vars($qv) {
 }
 
 function wti_multilang_rewrite_rules($rules) {
-  $langs = wti_multilang_get_active_languages();
-  $result['(' . implode('|', $langs) . ')/([^/]+)/?'] = 'index.php?lang=$matches[1]&name=$matches[2]';
-  $result['(' . implode('|', $langs) . ')/?'] = 'index.php?lang=$matches[1]';
+  $langs = get_option('wtiml_languages');
+  $langs_regex_part = implode('|', array_keys($langs));
+  $result['(' . $langs_regex_part . ')/([^/]+)/?'] = 'index.php?lang=$matches[1]&name=$matches[2]';
+  $result['(' . $langs_regex_part . ')/?'] = 'index.php?lang=$matches[1]';
   return $result + $rules;
-}
-
-function wti_multilang_get_active_languages() {
-  return array('en', 'de', 'fr', 'it');
-}
-
-function wti_multilang_get_default_language() {
-  return 'en';
 }
 
 function wti_multilang_get_current_language() {
   static $lang;
   if (empty($lang)) {
-    $langs = wti_multilang_get_active_languages();
+    $langs = get_option('wtiml_languages');
     $server_url = $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
     $home_without_scheme = preg_replace('/https?:\/\//', '', wti_multilang_get_home_url());
     $path = str_replace($home_without_scheme, '', $server_url);
-    preg_match('/\/(' . implode('|', $langs) . ')/', $path, $matches);
-    $lang = count($matches) > 1 ? $matches[1] : wti_multilang_get_default_language();
+    preg_match('/\/(' . implode('|', array_keys($langs)) . ')/', $path, $matches);
+    $lang = count($matches) > 1 ? $matches[1] : $langs['default'];
   }
   return $lang;
 }
@@ -100,8 +104,12 @@ function wti_multilang_get_home_url() {
 }
 
 function wti_multilang_link_url($url) {
-  $api = wti_multilang_api();
-  $languages = $api->getLanguages();
+  $languages = get_option('wtiml_languages');
+  if (count($languages) < 1) {
+    //only interfere with urls if we actually have languages set up
+    return $url;
+  }
+
   $current_lang = wti_multilang_get_current_language();
   $home = wti_multilang_get_home_url();
 
@@ -109,8 +117,7 @@ function wti_multilang_link_url($url) {
   $pattern = '/^\/(' . implode('|', array_keys($languages)) . ')/';
   $path = preg_replace($pattern, '', $path);
 
-  $result = $home . ($current_lang != $languages['default'] ? '/' . $current_lang : '') . $path;
-  return $result;
+  return $home . ($current_lang != $languages['default'] ? '/' . $current_lang : '') . $path;
 }
 
 function wti_multilang_admin_menu() {
@@ -121,22 +128,47 @@ function wti_multilang_page_admin() {
   //TODO add capability check - security
 
   $data = array(
-    'project' => get_option('wtiml_project'),
+    'languages' => get_option('wtiml_languages'),
   );
   $update_data = $data;
 
-  if (isset($_POST['update-translations']) && $_POST['update-translations'] == '1') {
-    $api = wti_multilang_api();
-    $translations = wti_multilang_translations();
-    $result = $translations->saveTranslationsLocally($api->prepareStrings($api->getStrings()));
-    $update_data['message'] = array(
-      'text' => $result === true ? 'The translations have been updated successfully' : $result,
-      'type' => $result === true ? 'updated' : 'error',
-    );
+  if (!wti_multilang_setup_done() && strlen(get_option('wtiml_api_key')) > 0) {
+    //we seem to have an api key, but have not initialized our data yet.
+    wti_multilang_update_wti_data('Wti Multilang is now configured and ready to be used.');
   }
+  elseif (isset($_POST['update-translations']) && $_POST['update-translations'] == '1') {
+    wti_multilang_update_wti_data();
+  }
+
   wti_multilang_theme('settings', $data);
   wti_multilang_theme('admin-languages', $data);
   wti_multilang_theme('update-translations', $update_data);
+}
+
+function wti_multilang_update_wti_data($success_message = 'The translations have been updated successfully.') {
+  $errors = array();
+  $api = wti_multilang_api();
+  $lang_result = $api->getLanguages();
+  if (!is_array($lang_result)) {
+    $errors[] = $lang_result;
+  }
+  else {
+    update_option('wtiml_languages', $lang_result);
+  }
+
+  $translations = $api->prepareTranslations($api->getStrings());
+  $strings_result = wti_multilang_save_translations_locally($translations);
+  if ($strings_result !== true) {
+    $errors[] = $strings_result;
+  }
+
+  if (count($errors) < 1) {
+    wti_multilang_message($success_message, 'updated');
+  }
+  else {
+    wti_multilang_message(implode('<br>', $errors), 'error');
+  }
+  return count($errors) < 1;
 }
 
 function wti_multilang_theme($template, $data = array()) {
@@ -152,3 +184,17 @@ function wti_multilang_message($message, $type = 'updated') {
   wti_multilang_theme('message', array('message' => $message, 'type' => $type));
 }
 
+function wti_multilang_save_translations_locally($data) {
+  $result = true;
+  foreach ($data AS $lang => $translations) {
+    $filename = dirname(__FILE__) . '/translations/' . $lang . '.json';
+    $result = $result && file_put_contents($filename, json_encode($translations)) !== FALSE && chmod($filename, 0755);
+  }
+  return $result ? true : 'Wti Multilang: Error writing translations files.';
+}
+
+function wti_multilang_setup_done() {
+  $api_key = get_option('wtiml_api_key');
+  $languages = get_option('wtiml_languages');
+  return $api_key !== FALSE && strlen($api_key) > 0 && $languages !== false && isset($languages['default']) && isset($languages['all']) && count($languages['all']) > 0;
+}
