@@ -29,7 +29,6 @@ function wti_multilang_init() {
 
 function wti_multilang_install() {
   $translations = wti_multilang_translations();
-  $translations->createTranslationsTable();
   update_option('wtiml_schema_version', $translations->getSchemaVersion());
 }
 
@@ -55,6 +54,8 @@ function wti_multilang_admin_init() {
   register_setting('wtiml', 'wtiml_api_key');
   //add_settings_section('setup', 'Setup', 'wti_multilang_section_setup', 'wti-multilang');
   add_settings_field('wtiml_api_key', 'Api public key', 'wti_multilang_api_key_field', 'wti-multilang', 'default', array('id' => 'wtiml_api_key'));
+  wp_register_style('wtiml-admin-css', plugins_url('css/admin.css', __FILE__));
+  wp_enqueue_style('wtiml-admin-css');
 }
 
 function wti_multilang_query_vars($qv) {
@@ -71,6 +72,10 @@ function wti_multilang_rewrite_rules($rules) {
 
 function wti_multilang_get_active_languages() {
   return array('en', 'de', 'fr', 'it');
+}
+
+function wti_multilang_get_default_language() {
+  return 'en';
 }
 
 function wti_multilang_get_current_language() {
@@ -94,31 +99,17 @@ function wti_multilang_get_home_url() {
   return $home;
 }
 
-function wti_multilang_get_default_language() {
-  return 'en';
-}
-
 function wti_multilang_link_url($url) {
-  $lang = wti_multilang_get_language_data();
+  $api = wti_multilang_api();
+  $languages = $api->getLanguages();
+  $current_lang = wti_multilang_get_current_language();
   $home = wti_multilang_get_home_url();
 
   $path = str_replace($home, '', $url);
-  $pattern = '/^\/(' . implode('|', $lang['languages']) . ')/';
+  $pattern = '/^\/(' . implode('|', array_keys($languages)) . ')/';
   $path = preg_replace($pattern, '', $path);
 
-  $result = $home . ($lang['current'] != $lang['default'] ? '/' . $lang['current'] : '') . $path;
-  return $result;
-}
-
-function wti_multilang_get_language_data() {
-  static $result;
-  if (empty($result)) {
-    $result =  array(
-      'current' => wti_multilang_get_current_language(),
-      'default' => wti_multilang_get_default_language(),
-      'languages' => wti_multilang_get_active_languages(),
-    );
-  }
+  $result = $home . ($current_lang != $languages['default'] ? '/' . $current_lang : '') . $path;
   return $result;
 }
 
@@ -127,35 +118,37 @@ function wti_multilang_admin_menu() {
 }
 
 function wti_multilang_page_admin() {
-  //TODO add capability check
-  $api = wti_multilang_api();
-  $strings = $api->getStrings();
-  krumo($strings);
-  //wti_multilang_retrieve_lang_file();
-  //wti_multilang_update_wti_data();
+  //TODO add capability check - security
+
   $data = array(
     'project' => get_option('wtiml_project'),
   );
-  wti_multilang_theme('admin-languages', $data);
+  $update_data = $data;
+
+  if (isset($_POST['update-translations']) && $_POST['update-translations'] == '1') {
+    $api = wti_multilang_api();
+    $translations = wti_multilang_translations();
+    $result = $translations->saveTranslationsLocally($api->prepareStrings($api->getStrings()));
+    $update_data['message'] = array(
+      'text' => $result === true ? 'The translations have been updated successfully' : $result,
+      'type' => $result === true ? 'updated' : 'error',
+    );
+  }
   wti_multilang_theme('settings', $data);
+  wti_multilang_theme('admin-languages', $data);
+  wti_multilang_theme('update-translations', $update_data);
 }
 
 function wti_multilang_theme($template, $data = array()) {
   $dir = dirname(__FILE__);
   $filename = $dir . '/templates/' . $template . '.tpl.php';
   if (!file_exists($filename)) {
-    return wti_multilang_error('Template not found: ' . $template);
+    return wti_multilang_message('Template not found: ' . $template, 'error');
   }
   include($filename);
 }
 
-function wti_multilang_error($message) {
-  if (WP_DEBUG) {
-    wti_multilang_theme('error', array('message' => $message));
-  }
-  elseif ('user_error' == $type) {
-    wti_multilang_theme('error', array('message' => $message, 'type' => $type));
-  }
-  return false;
+function wti_multilang_message($message, $type = 'updated') {
+  wti_multilang_theme('message', array('message' => $message, 'type' => $type));
 }
 
