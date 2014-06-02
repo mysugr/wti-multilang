@@ -212,6 +212,7 @@ function wti_multilang_setup_done() {
 function wti_multilang_shortcode($attrs = array(), $content = '') {
   //[wti]global.save[/wti]
   //[wti attribute]global.save[/wti]
+  //[wti]Hello world![/wti]
   return wti_multilang_get_translation($content, isset($attrs['attribute']));
 }
 
