@@ -22,6 +22,7 @@ add_filter('home_url', 'wti_multilang_link_url');
 add_filter('query_vars', 'wti_multilang_query_vars');
 add_action('admin_menu', 'wti_multilang_admin_menu');
 add_action('admin_notices', 'wti_multilang_admin_notices');
+add_action('parse_request', 'wti_multilang_parse_request');
 add_shortcode('wti', 'wti_multilang_shortcode');
 
 function wti_multilang_init() {
@@ -40,14 +41,15 @@ function wti_multilang_install() {
     'default' => 'en',
     'all' => array(),
   ));
-  update_option('wtiml_api_key', '');
+  update_option('wtiml_private_api_key', '');
+  update_option('wtiml_public_api_key', '');
 }
 
 function wti_multilang_api() {
   static $api;
   if (empty($api)) {
     include_once(dirname(__FILE__) . '/api.php');
-    $api = new WtiApi(get_option('wtiml_api_key'));
+    $api = new WtiApi(wti_multilang_get_api_key('private'));
   }
   return $api;
 }
@@ -62,10 +64,13 @@ function wti_multilang_translations() {
 }
 
 function wti_multilang_admin_init() {
-  register_setting('wtiml', 'wtiml_api_key');
+  register_setting('wtiml', 'wtiml_private_api_key');
+  register_setting('wtiml', 'wtiml_public_api_key');
 
-  //add_settings_section('setup', 'Setup', 'wti_multilang_section_setup', 'wti-multilang');
-  add_settings_field('wtiml_api_key', 'Api public key', 'wti_multilang_api_key_field', 'wti-multilang', 'default', array('id' => 'wtiml_api_key'));
+  add_settings_field('wtiml_private_api_key', 'Api private key', 'wti_multilang_api_key_field', 'wti-multilang', 'default', array('id' => 'wtiml_private_api_key'));
+
+  add_settings_field('wtiml_public_api_key', 'Api public key', 'wti_multilang_api_key_field', 'wti-multilang', 'default', array('id' => 'wtiml_public_api_key'));
+
   wp_register_style('wtiml-admin-css', plugins_url('css/admin.css', __FILE__));
   wp_enqueue_style('wtiml-admin-css');
 }
@@ -76,17 +81,46 @@ function wti_multilang_admin_notices() {
   }
 }
 
+function wti_multilang_get_api_key($type) {
+  static $api_keys;
+  if (empty($api_keys)) {
+    $api_keys = array(
+      'private' => get_option('wtiml_private_api_key'),
+      'public' => get_option('wtiml_public_api_key'),
+    );
+  }
+
+  switch ($type) {
+    case 'private': return $api_keys['private'];
+    case 'all': return array('private' => $api_keys['private'], 'public' => $api_keys['public']);
+    default: return $api_keys['public'];
+  }
+}
+
 function wti_multilang_query_vars($qv) {
   $qv[] = 'lang';
+  $qv[] = 'webtranslateit-webhook';
   return $qv;
 }
 
 function wti_multilang_rewrite_rules($rules) {
   $langs = get_option('wtiml_languages');
   $langs_regex_part = implode('|', array_keys($langs['all']));
-  $result['(' . $langs_regex_part . ')/([^/]+)/?'] = 'index.php?lang=$matches[1]&name=$matches[2]';
+
+  //the translated home page
   $result['(' . $langs_regex_part . ')/?'] = 'index.php?lang=$matches[1]';
+  //any other translate url
+  $result['(' . $langs_regex_part . ')/([^/]+)/?'] = 'index.php?lang=$matches[1]&name=$matches[2]';
+  //the webtranslateit webhook url
+  $result['webtranslateit-webhook'] = 'index.php?webtranslateit-webhook=1';
   return $result + $rules;
+}
+
+function wti_multilang_parse_request($wp) {
+  if (isset($wp->query_vars['webtranslateit-webhook'])) {
+    wti_multilang_webhook_handler();
+    wp_die();
+  }
 }
 
 function wti_multilang_get_current_language() {
@@ -139,7 +173,7 @@ function wti_multilang_page_admin() {
   );
   $update_data = $data;
 
-  if (!wti_multilang_setup_done() && strlen(get_option('wtiml_api_key')) > 0) {
+  if (!wti_multilang_setup_done() && strlen(wti_multilang_get_api_key('private')) > 0) {
     //we seem to have an api key, but have not initialized our data yet.
     wti_multilang_update_wti_data('Wti Multilang is now configured and ready to be used.');
   }
@@ -204,7 +238,7 @@ function wti_multilang_save_translations_locally($data) {
 }
 
 function wti_multilang_setup_done() {
-  $api_key = get_option('wtiml_api_key');
+  $api_key = wti_multilang_get_api_key('private');
   $languages = get_option('wtiml_languages');
   return $api_key !== FALSE && strlen($api_key) > 0 && $languages !== false && isset($languages['default']) && isset($languages['all']) && count($languages['all']) > 0;
 }
@@ -237,4 +271,31 @@ function wti_multilang_get_translation($key, $hide_status = true) {
     $output=  '<span class="wti-' . $status . '" data-wtiml="' . $key . '">' . $translation . '</span>';
   }
   return $output;
+}
+
+function wti_multilang_webhook_handler() {
+  $payload = json_decode(@stripcslashes($_POST['payload']), true);
+
+  //let's check whether this request is really from wti and actually has some useful data to update
+  if (!is_array($payload)) {
+    exit;
+  }
+
+  $api = wti_multilang_api();
+  $languages = $api->getLanguages();
+
+  preg_match("/https:\/\/webtranslateit\.com\/api\/projects\/([^\/]+)\/files\//", $payload['api_url'], $matches);
+  if (count($matches) < 2 || $matches[1] != wti_multilang_get_api_key('public') || !in_array($payload['locale'], array_keys($languages['all']))) {
+    exit;
+  }
+
+  $filename = dirname(__FILE__) . '/translations/' . $payload['locale'] . '.json';
+  $data = json_decode(file_get_contents($filename), true);
+  $key = @$payload['translation']['string']['key'];
+  if (is_array($data) && strlen($key) > 0) {
+    $data[$key]['text'] = $payload['translation']['text'];
+    $data[$key]['status'] = $payload['translation']['status'];
+    $data[$key]['version'] = $payload['translation']['version'];
+    file_put_contents($filename, json_encode($data));
+  }
 }
