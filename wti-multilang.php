@@ -9,7 +9,6 @@
  * License: GPL2
  */
 
-//
 include_once('/home/witti/public/krumo/class.krumo.php');
 include_once(dirname(__FILE__) . '/settings.php');
  
@@ -26,14 +25,12 @@ add_action('parse_request', 'wti_multilang_parse_request');
 add_shortcode('wti', 'wti_multilang_shortcode');
 
 function wti_multilang_init() {
+  /*
   global $wtiml;
   $wtiml = array(
     'current_lang' => wti_multilang_get_current_language(),
   );
-  $translations_filename = dirname(__FILE__) . '/translations/' . $wtiml['current_lang'] . '.json';
-  if (file_exists($translations_filename)) {
-    $wtiml['translations'] = json_decode(file_get_contents($translations_filename), true);
-  }
+  */
 }
 
 function wti_multilang_install() {
@@ -251,10 +248,20 @@ function wti_multilang_shortcode($attrs = array(), $content = '') {
 }
 
 function wti_multilang_get_translation($key, $hide_status = true) {
-  global $wtiml;
-  if (isset($wtiml['translations'][$key])) {
-    $translation = $wtiml['translations'][$key]['text'];
-    $status = $wtiml['translations'][$key]['status'];
+  static $translations;
+  $current_lang = wti_multilang_get_current_language(); 
+  if (!isset($translations[$current_lang][$key])) {
+    if (empty($translations[$current_lang])) {
+      $translations_filename = dirname(__FILE__) . '/translations/' . $current_lang . '.json';
+      if (file_exists($translations_filename)) {
+        $translations[$current_lang] = json_decode(file_get_contents($translations_filename), true);
+      }
+    }
+  }
+
+  if (isset($translations[$current_lang][$key])) {
+    $translation = $translations[$current_lang][$key]['text'];
+    $status = $translations[$current_lang][$key]['status'];
   }
   else {
     $translation = 'Error finding translation for key: ' . $key;

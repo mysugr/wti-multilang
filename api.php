@@ -102,7 +102,6 @@ class WtiApi {
 
   public function prepareTranslations($strings) {
     $result = array();
-    krumo($strings);
     foreach ($strings AS $lang => $str) {
       $result[$lang] = array();
       foreach ($str AS $segment) {
