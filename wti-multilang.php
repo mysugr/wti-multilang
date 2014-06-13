@@ -5,7 +5,7 @@
  * Description: Wti Multilang.
  * Version: 0.1
  * Author: Martin Wittmann
- * Author URI: http://martinwittmann.at
+ * Author URI: https://github.com/mysugr/wti-multilang
  * License: GPL2
  */
 
