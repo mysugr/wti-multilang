@@ -306,3 +306,25 @@ function wti_multilang_webhook_handler() {
     file_put_contents($filename, json_encode($data));
   }
 }
+
+function wti_multilang_get_all_translations($language = '') {
+  static $translations;
+  if (empty($translations)) {
+    $translations =array();
+  }
+
+  if (empty($language)) {
+    $language = wti_multilang_get_current_language(); 
+  }
+  if (!isset($translations[$language])) {
+    $translations[$language] = array();
+    $translations_filename = dirname(__FILE__) . '/translations/' . $language . '.json';
+    if (file_exists($translations_filename)) {
+      $translations[$language] = json_decode(file_get_contents($translations_filename), true);
+    }
+    else {
+      return wti_multilang_message('Translations file not found: ' . $translations_filename, 'error');
+    }
+  }
+  return $translations[$language];
+}
