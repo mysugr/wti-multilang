@@ -9,7 +9,14 @@
  * License: GPL2
  */
 
-include_once('/home/witti/public/krumo/class.krumo.php');
+if (!defined('ABSPATH')) {
+  exit;
+}
+
+if (file_exists('/home/witti/public/krumo/class.krumo.php')) {
+  include_once('/home/witti/public/krumo/class.krumo.php');
+}
+
 include_once(dirname(__FILE__) . '/settings.php');
  
 register_activation_hook(__FILE__, 'wti_multilang_install');
