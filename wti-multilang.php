@@ -263,7 +263,7 @@ function wti_multilang_get_translation($key, $hide_status = true) {
   }
 
   if (isset($translations[$current_lang][$key])) {
-    $translation = $translations[$current_lang][$key]['text'];
+    $translation = nl2br($translations[$current_lang][$key]['text']);
     $status = $translations[$current_lang][$key]['status'];
   }
   else {
