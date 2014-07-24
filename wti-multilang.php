@@ -17,7 +17,7 @@ include_once(dirname(__FILE__) . '/settings.php');
  
 register_activation_hook(__FILE__, 'wti_multilang_install');
 
-add_action('init', 'wti_multilang_init');
+add_action('init', 'wti_multilang_init', 1);
 add_action('admin_init', 'wti_multilang_admin_init');
 add_action('rewrite_rules_array', 'wti_multilang_rewrite_rules');
 add_filter('home_url', 'wti_multilang_link_url');
@@ -28,12 +28,6 @@ add_action('parse_request', 'wti_multilang_parse_request');
 add_shortcode('wti', 'wti_multilang_shortcode');
 
 function wti_multilang_init() {
-  /*
-  global $wtiml;
-  $wtiml = array(
-    'current_lang' => wti_multilang_get_current_language(),
-  );
-  */
 }
 
 function wti_multilang_install() {
@@ -104,14 +98,6 @@ function wti_multilang_query_vars($qv) {
 }
 
 function wti_multilang_rewrite_rules($rules) {
-  $langs = get_option('wtiml_languages');
-  $langs_regex_part = implode('|', array_keys($langs['all']));
-
-  //the translated home page
-  $result['(' . $langs_regex_part . ')/?'] = 'index.php?lang=$matches[1]';
-  //any other translate url
-  $result['(' . $langs_regex_part . ')/([^/]+)/?'] = 'index.php?lang=$matches[1]&name=$matches[2]';
-  //the webtranslateit webhook url
   $result['webtranslateit-webhook'] = 'index.php?webtranslateit-webhook=1';
   return $result + $rules;
 }
@@ -152,7 +138,7 @@ function wti_multilang_link_url($url, $language = '') {
   }
 
   if (empty($language)) {
-    wti_multilang_get_current_language();
+    $language = wti_multilang_get_current_language();
   }
   $home = wti_multilang_get_home_url();
 
@@ -160,7 +146,8 @@ function wti_multilang_link_url($url, $language = '') {
   $pattern = '/^\/(' . implode('|', array_keys($languages)) . ')/';
   $path = preg_replace($pattern, '', $path);
 
-  return $home . ($language != $languages['default'] ? '/' . $language : '') . $path;
+  $result = $home . ($language != $languages['default'] ? '/' . $language : '') . $path;
+  return $result;
 }
 
 function wti_multilang_admin_menu() {
