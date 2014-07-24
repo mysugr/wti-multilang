@@ -241,6 +241,9 @@ function wti_multilang_shortcode($attrs = array(), $content = '') {
 
 function wti_multilang_get_translation($key, $hide_status = true) {
   static $translations;
+  if (empty($key)) {
+    return '';
+  }
   $current_lang = wti_multilang_get_current_language(); 
   if (!isset($translations[$current_lang][$key])) {
     if (empty($translations[$current_lang])) {
