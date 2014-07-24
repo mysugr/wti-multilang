@@ -144,21 +144,23 @@ function wti_multilang_get_home_url() {
   return $home;
 }
 
-function wti_multilang_link_url($url) {
+function wti_multilang_link_url($url, $language = '') {
   $languages = get_option('wtiml_languages');
   if (count($languages) < 1) {
     //only interfere with urls if we actually have languages set up
     return $url;
   }
 
-  $current_lang = wti_multilang_get_current_language();
+  if (empty($language)) {
+    wti_multilang_get_current_language();
+  }
   $home = wti_multilang_get_home_url();
 
   $path = str_replace($home, '', $url);
   $pattern = '/^\/(' . implode('|', array_keys($languages)) . ')/';
   $path = preg_replace($pattern, '', $path);
 
-  return $home . ($current_lang != $languages['default'] ? '/' . $current_lang : '') . $path;
+  return $home . ($language != $languages['default'] ? '/' . $language : '') . $path;
 }
 
 function wti_multilang_admin_menu() {
@@ -232,7 +234,7 @@ function wti_multilang_save_translations_locally($data) {
   $result = true;
   foreach ($data AS $lang => $translations) {
     $filename = dirname(__FILE__) . '/translations/' . $lang . '.json';
-    $result = $result && file_put_contents($filename, json_encode($translations)) !== FALSE && chmod($filename, 0755);
+    $result = $result && file_put_contents($filename, json_encode($translations)) !== FALSE;
   }
   return $result ? true : 'Wti Multilang: Error writing translations files.';
 }
@@ -330,4 +332,28 @@ function wti_multilang_get_all_translations($language = '') {
     }
   }
   return $translations[$language];
+}
+
+function wti_multilang_get_languages() {
+  $langs = get_option('wtiml_languages');
+  $result = array(
+    $langs['default'],
+  );
+  foreach ($langs['all'] AS $lang => $title) {
+    if ($lang != $langs['default']) {
+      $result[] = $lang;
+    }
+  }
+  return $result;
+}
+
+function wti_multilang_get_language_urls() {
+  $langs = get_option('wtiml_languages');
+  $current_url = (empty($_SERVER['HTTPS']) ? 'http' : 'https') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+  $result = array();
+  $langs_regex_part = implode('|', array_keys($langs['all']));
+  foreach ($langs['all'] AS $lang => $title) {
+    $result[$lang] = wti_multilang_link_url($current_url, $lang);
+  }
+  return $result;
 }
