@@ -257,7 +257,7 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
   if (isset($translations[$current_lang][$key])) {
     $translation = nl2br($translations[$current_lang][$key]['text']);
     $status = $translations[$current_lang][$key]['status'];
-    if (!empty($replacements)) {
+    if (!empty($replacements) && is_array($replacements)) {
       foreach ($replacements AS $search => $replace) {
         $translation = str_replace($search, $replace, $translation);
       }
