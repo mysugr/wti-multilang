@@ -89,9 +89,9 @@ class WtiApi {
     }
 
     if (count($errors) < 1) {
-      $last_page_id = $matches[1];
+      $last_page_id = intval($matches[1]);
       if ($page_id < $last_page_id) {
-        $data += $this->getStrings($page_id + 1);
+        $data += array_merge($data, $this->getStrings($page_id + 1, $locale));
       }
       return $data;
     }

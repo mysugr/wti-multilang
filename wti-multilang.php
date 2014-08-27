@@ -190,6 +190,7 @@ function wti_multilang_update_wti_data($success_message = 'The translations have
   }
 
   $translations = $api->prepareTranslations($api->getStrings());
+  krumo($translations);
   $strings_result = wti_multilang_save_translations_locally($translations);
   if ($strings_result !== true) {
     $errors[] = $strings_result;
@@ -239,24 +240,27 @@ function wti_multilang_shortcode($attrs = array(), $content = '') {
   return wti_multilang_get_translation($content, isset($attrs['attribute']));
 }
 
-function wti_multilang_get_translation($key, $hide_status = true, $replacements = array()) {
+function wti_multilang_get_translation($key, $hide_status = true, $replacements = array(), $lang = false) {
   static $translations;
   if (empty($key)) {
     return '';
   }
-  $current_lang = wti_multilang_get_current_language(); 
-  if (!isset($translations[$current_lang][$key])) {
-    if (empty($translations[$current_lang])) {
-      $translations_filename = dirname(__FILE__) . '/translations/' . $current_lang . '.json';
+
+  if (!$lang) {
+    $lang = wti_multilang_get_current_language(); 
+  }
+  if (!isset($translations[$lang][$key])) {
+    if (empty($translations[$lang])) {
+      $translations_filename = dirname(__FILE__) . '/translations/' . $lang . '.json';
       if (file_exists($translations_filename)) {
-        $translations[$current_lang] = json_decode(file_get_contents($translations_filename), true);
+        $translations[$lang] = json_decode(file_get_contents($translations_filename), true);
       }
     }
   }
 
-  if (isset($translations[$current_lang][$key])) {
-    $translation = nl2br($translations[$current_lang][$key]['text']);
-    $status = $translations[$current_lang][$key]['status'];
+  if (isset($translations[$lang][$key])) {
+    $translation = nl2br($translations[$lang][$key]['text']);
+    $status = $translations[$lang][$key]['status'];
     if (!empty($replacements) && is_array($replacements)) {
       foreach ($replacements AS $search => $replace) {
         $translation = str_replace($search, $replace, $translation);
