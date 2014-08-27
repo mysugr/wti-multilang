@@ -190,7 +190,6 @@ function wti_multilang_update_wti_data($success_message = 'The translations have
   }
 
   $translations = $api->prepareTranslations($api->getStrings());
-  krumo($translations);
   $strings_result = wti_multilang_save_translations_locally($translations);
   if ($strings_result !== true) {
     $errors[] = $strings_result;
