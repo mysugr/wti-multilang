@@ -17,7 +17,7 @@ include_once(dirname(__FILE__) . '/settings.php');
  
 register_activation_hook(__FILE__, 'wti_multilang_install');
 
-add_filter('locale', 'wti_multilang_locale');
+add_filter('locale', 'wti_multilang_locale', 1);
 add_action('admin_init', 'wti_multilang_admin_init');
 add_action('rewrite_rules_array', 'wti_multilang_rewrite_rules');
 add_filter('home_url', 'wti_multilang_link_url');
@@ -27,18 +27,23 @@ add_action('admin_notices', 'wti_multilang_admin_notices');
 add_action('parse_request', 'wti_multilang_parse_request');
 add_shortcode('wti', 'wti_multilang_shortcode');
 
-function wti_multilang_locale() {
+function wti_multilang_locale($locale) {
   $lang = wti_multilang_get_current_language();
   switch ($lang) {
     case 'de':
-      return 'de_DE';
+      $locale = 'de_DE';
+      break;
     case 'en':
-      return 'en_US';
+      $locale = 'en_US';
+      break;
     case 'fr':
-      return 'fr_FR';
+      $locale = 'fr_FR';
+      break;
     case 'it':
-      return 'it_IT';
+      $locale = 'it_IT';
+      break;
   }
+  return $locale;
 }
 
 function wti_multilang_install() {
