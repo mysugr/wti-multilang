@@ -240,6 +240,7 @@ function wti_multilang_shortcode($attrs = array(), $content = '') {
 }
 
 function wti_multilang_get_translation($key, $hide_status = true, $replacements = array(), $lang = false) {
+  $hide_status = true;
   static $translations;
   if (empty($key)) {
     return '';
