@@ -20,7 +20,7 @@ register_activation_hook(__FILE__, 'wti_multilang_install');
 add_filter('locale', 'wti_multilang_locale', 1);
 add_action('admin_init', 'wti_multilang_admin_init');
 add_action('rewrite_rules_array', 'wti_multilang_rewrite_rules');
-add_filter('home_url', 'wti_multilang_link_url');
+//add_filter('home_url', 'wti_multilang_link_url');
 add_filter('query_vars', 'wti_multilang_query_vars');
 add_action('admin_menu', 'wti_multilang_admin_menu');
 add_action('admin_notices', 'wti_multilang_admin_notices');
@@ -114,8 +114,16 @@ function wti_multilang_query_vars($qv) {
 }
 
 function wti_multilang_rewrite_rules($rules) {
-  $result['webtranslateit-webhook'] = 'index.php?webtranslateit-webhook=1';
-  return $result + $rules;
+  $new_rules = array(
+    'webtranslateit-webhook' => 'index.php?webtranslateit-webhook=1',
+  );
+  $langs = get_option('wtiml_languages');
+  foreach ($langs['all'] AS $lang => $title) {
+    if ($lang != $langs['default']) {
+      $new_rules[$lang . '/?$'] = 'index.php';
+    }
+  }
+  return $new_rules + $rules;
 }
 
 function wti_multilang_parse_request($wp) {
@@ -303,7 +311,6 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
 function wti_multilang_webhook_handler() {
   $payload = json_decode(@stripcslashes($_POST['payload']), true);
 
-  //let's check whether this request is really from wti and actually has some useful data to update
   if (!is_array($payload)) {
     exit;
   }
@@ -311,6 +318,7 @@ function wti_multilang_webhook_handler() {
   $api = wti_multilang_api();
   $languages = $api->getLanguages();
 
+  // Let's check whether this request is really from wti and actually has some useful data to update
   preg_match("/https:\/\/webtranslateit\.com\/api\/projects\/([^\/]+)\/files\//", $payload['api_url'], $matches);
   if (count($matches) < 2 || $matches[1] != wti_multilang_get_api_key('public') || !in_array($payload['locale'], array_keys($languages['all']))) {
     exit;
