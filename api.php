@@ -109,10 +109,25 @@ class WtiApi {
           'text' => $segment['translations']['text'],
           'status' => str_replace('status_', '', $segment['translations']['status']),
           'version' => $segment['translations']['version'],
+          'id' => $segment['id'],
+          'project' => $segment['project']['id'],
         );
       }
     }
     return $result;
   }
 
+  function addTextSegment($key) {
+    $errors = array();
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_URL, "https://webtranslateit.com/api/projects/" . $this->api_key . "/strings");
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(array(
+      'key' => $key,
+      'type' => 'String',
+    )));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+    $response = curl_exec($ch);
+    return json_decode($response, true);
+  }
 }

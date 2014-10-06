@@ -20,12 +20,13 @@ register_activation_hook(__FILE__, 'wti_multilang_install');
 add_filter('locale', 'wti_multilang_locale', 1);
 add_action('admin_init', 'wti_multilang_admin_init');
 add_action('rewrite_rules_array', 'wti_multilang_rewrite_rules');
-//add_filter('home_url', 'wti_multilang_link_url');
 add_filter('query_vars', 'wti_multilang_query_vars');
 add_action('admin_menu', 'wti_multilang_admin_menu');
 add_action('admin_notices', 'wti_multilang_admin_notices');
 add_action('parse_request', 'wti_multilang_parse_request');
+add_action('wp_before_admin_bar_render', 'wti_multilang_before_toolbar_render');
 add_shortcode('wti', 'wti_multilang_shortcode');
+add_action('wp_ajax_mysugr_wti_add_text_key', 'wti_multilang_ajax_wti_add_text_key');
 
 function wti_multilang_locale($locale) {
   $lang = wti_multilang_get_current_language();
@@ -83,6 +84,10 @@ function wti_multilang_admin_init() {
 
   wp_register_style('wtiml-admin-css', plugins_url('css/admin.css', __FILE__));
   wp_enqueue_style('wtiml-admin-css');
+
+  if (wti_multilang_register_translation_usage()) {
+    wp_enqueue_script('wtiml-autocomplete', plugins_url('translations/autocomplete-data.js', __FILE__));
+  }
 }
 
 function wti_multilang_admin_notices() {
@@ -215,6 +220,7 @@ function wti_multilang_update_wti_data($success_message = 'The translations have
 
   $translations = $api->prepareTranslations($api->getStrings());
   $strings_result = wti_multilang_save_translations_locally($translations);
+  wti_multilang_create_autocomplete_data($translations);
   if ($strings_result !== true) {
     $errors[] = $strings_result;
   }
@@ -263,28 +269,33 @@ function wti_multilang_shortcode($attrs = array(), $content = '') {
   return wti_multilang_get_translation($content, isset($attrs['attribute']));
 }
 
+function wti_multilang_get_translation_data($lang = '') {
+  static $translations;
+
+  if (empty($lang)) {
+    $lang = wti_multilang_get_current_language(); 
+  }
+
+  if (!isset($translations[$lang])) {
+    $translations_filename = dirname(__FILE__) . '/translations/' . $lang . '.json';
+    if (file_exists($translations_filename)) {
+      $translations[$lang] = json_decode(file_get_contents($translations_filename), true);
+    }
+  }
+  return $translations[$lang];
+}
+
 function wti_multilang_get_translation($key, $hide_status = true, $replacements = array(), $lang = false) {
   $hide_status = true;
-  static $translations;
   if (empty($key)) {
     return '';
   }
 
-  if (!$lang) {
-    $lang = wti_multilang_get_current_language(); 
-  }
-  if (!isset($translations[$lang][$key])) {
-    if (empty($translations[$lang])) {
-      $translations_filename = dirname(__FILE__) . '/translations/' . $lang . '.json';
-      if (file_exists($translations_filename)) {
-        $translations[$lang] = json_decode(file_get_contents($translations_filename), true);
-      }
-    }
-  }
+  $translations = wti_multilang_get_translation_data($lang);
 
-  if (isset($translations[$lang][$key])) {
-    $translation = nl2br($translations[$lang][$key]['text']);
-    $status = $translations[$lang][$key]['status'];
+  if (isset($translations[$key])) {
+    $translation = nl2br($translations[$key]['text']);
+    $status = $translations[$key]['status'];
     if (!empty($replacements) && is_array($replacements)) {
       foreach ($replacements AS $search => $replace) {
         $translation = str_replace($search, $replace, $translation);
@@ -305,6 +316,7 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
   else {
     $output=  '<span class="wti-' . $status . '" data-wtiml="' . $key . '">' . $translation . '</span>';
   }
+  wti_multilang_register_translation_usage($key);
   return $output;
 }
 
@@ -379,4 +391,133 @@ function wti_multilang_get_language_urls() {
     $result[$lang] = wti_multilang_link_url($current_url, $lang);
   }
   return $result;
+}
+
+function wti_multilang_before_toolbar_render() {
+  global $wp_admin_bar;
+  if (is_admin()) {
+    return;
+  }
+
+  $used_translations = wti_multilang_register_translation_usage();
+
+  if (!empty($used_translations)) {
+    $current_language = wti_multilang_get_current_language();
+    $first = reset($used_translations);
+    $wti_base_url = 'https://webtranslateit.com/en/projects/' . $first['project'] . '/';
+    $wp_admin_bar->add_node(array(
+      'id' => 'wti-multilang-used-translations',
+      'href' => $wti_base_url,
+      'title' => __('Translations'),
+    ));
+
+    foreach ($used_translations AS $key => $translation) {
+      $title = strlen($translation['text']) > 40 ? substr($translation['text'], 0, 40) . '&hellip;' : $translation['text'];
+      $title = '"' . $title . '" - ' . $key . ' (' . $translation['status'] . ')';
+      $wp_admin_bar->add_node(array(
+        'id' => 'wti-multilang-used-translations-' . $translation['id'],
+        'parent' => 'wti-multilang-used-translations',
+        'href' => $wti_base_url . 'locales/en..' . $current_language . '/strings/' . $translation['id'],
+        'title' => $title,
+      ));
+    }
+  }
+}
+
+function wti_multilang_register_translation_usage($key = '') {
+  static $used_translation_keys;
+  if (empty($used_translation_keys)) {
+    $used_translation_keys = array();
+  }
+
+  if (empty($key)) {
+    $all_translations = wti_multilang_get_translation_data();
+    $result = array();
+    foreach ($used_translation_keys AS $key) {
+      if (isset($all_translations[$key])) {
+        $result[$key] = $all_translations[$key];
+      }
+      else {
+        $result[$key] = array(
+          'text' => '[Translation key not found]',
+          'status' => 'error',
+          'version' => -1,
+        );
+      }
+    }
+    return $result;
+  }
+  elseif (!in_array($key, $used_translation_keys)) {
+    $used_translation_keys[] = $key;
+  }
+}
+
+function wti_multilang_create_autocomplete_data($translations) {
+  $langs = array_keys($translations);
+  $json = array(
+    'texts' => array(),
+    'project' => 0,
+    'languages' => $langs,
+  );
+  foreach ($translations['en'] AS $key => $translation) {
+    $translation_data = array();
+    foreach ($langs AS $lang) {
+      $translation_data[$lang] = $translations[$lang][$key]['text'];
+    }
+    $translation_data['key'] = $key;
+    $json['texts'][$translation['id']] = $translation_data;
+    $json['project'] = $translations[$lang][$key]['project'];
+  }
+  $filename = dirname(__FILE__) . '/translations/autocomplete-data.js';
+  file_put_contents($filename, 'var wtimlTranslations=' . json_encode($json)) . ';';
+}
+
+function wti_multilang_ajax_wti_autocomplete() {
+  $query = strtolower($_GET['term']);
+  $search_all = '[all]' == strtolower($_GET['term']);
+  $translations = wti_multilang_get_all_translations();
+  $results = array();
+  foreach ($translations AS $key => $translation) {
+    if (empty($translation['text']) || $translation['text'] == 'null') {
+      $translation['text'] = '[' . $translation['status'] . ']';
+    }
+    if ($search_all || strpos(strtolower($translation['text']), $query) !== false || strpos(strtolower($key), $query) !== false) {
+      $preview = strlen($translation['text']) > 70 ? substr($translation['text'], 0, 70) . '...' : $translation['text'];
+      $results[] = array(
+        'value' => $key,
+        'label' => $key . ' - "' . $preview . '"',
+      );
+    }
+  }
+  //asort($results);
+  print json_encode($results);
+  die();
+}
+
+function wti_multilang_ajax_wti_add_text_key() {
+  if (current_user_can('edit_posts')) {
+    $api = wti_multilang_api();
+    $result = $api->addTextSegment($_POST['key']);
+  }
+  if (is_array($result) && isset($result['id']) && !empty($result['id'])) {
+    // Update our current translation files.
+    $languages = wti_multilang_get_languages();
+    $all_translations = array();
+    foreach ($languages AS $language) {
+      $filename = dirname(__FILE__) . '/translations/' . $language . '.json';
+      $translations = json_decode(file_get_contents($filename), true);
+      $translations[$result['key']] = array(
+        'text' => '',
+        'status' => $result['status'],
+        'id' => $result['id'],
+        'version' => 1,
+        'project' => $result['project'],
+      );
+      file_put_contents($filename, json_encode($translations));
+      $all_translations[$language] = $translations;
+    }
+    wti_multilang_create_autocomplete_data($all_translations);
+  }
+  print json_encode($result);
+  die();
 }
