@@ -26,6 +26,7 @@ add_action('admin_notices', 'wti_multilang_admin_notices');
 add_action('parse_request', 'wti_multilang_parse_request');
 add_action('wp_before_admin_bar_render', 'wti_multilang_before_toolbar_render');
 add_shortcode('wti', 'wti_multilang_shortcode');
+add_filter('home_url', 'wti_multilang_link_url');
 add_action('wp_ajax_mysugr_wti_add_text_key', 'wti_multilang_ajax_wti_add_text_key');
 
 function wti_multilang_locale($locale) {
@@ -122,12 +123,6 @@ function wti_multilang_rewrite_rules($rules) {
   $new_rules = array(
     'webtranslateit-webhook' => 'index.php?webtranslateit-webhook=1',
   );
-  $langs = get_option('wtiml_languages');
-  foreach ($langs['all'] AS $lang => $title) {
-    if ($lang != $langs['default']) {
-      $new_rules[$lang . '/?$'] = 'index.php';
-    }
-  }
   return $new_rules + $rules;
 }
 
@@ -520,4 +515,9 @@ function wti_multilang_ajax_wti_add_text_key() {
   }
   print json_encode($result);
   die();
+}
+
+function wti_multilang_get_default_language() {
+  $langs = get_option('wtiml_languages');
+  return is_array($langs) ? $langs['default'] : false;
 }
