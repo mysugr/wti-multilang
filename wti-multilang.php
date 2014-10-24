@@ -32,7 +32,7 @@ add_shortcode('wti', 'wti_multilang_shortcode');
 // So /de/presse/downloads returns a http 404 because is sees this page as
 // /presse/downloads.
 // We worked around this problem by removing the home url filter which
-// 
+// has the sideeffect though that home_url() does not return a localized url
 //add_filter('home_url', 'wti_multilang_link_url');
 add_filter('post_link', 'wti_multilang_link_url');
 add_filter('page_link', 'wti_multilang_link_url');
