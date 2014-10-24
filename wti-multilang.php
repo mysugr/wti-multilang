@@ -26,8 +26,29 @@ add_action('admin_notices', 'wti_multilang_admin_notices');
 add_action('parse_request', 'wti_multilang_parse_request');
 add_action('wp_before_admin_bar_render', 'wti_multilang_before_toolbar_render');
 add_shortcode('wti', 'wti_multilang_shortcode');
-add_filter('home_url', 'wti_multilang_link_url');
+// NOTE:
+// we needed to remove the home url filter because it basically prevents
+// us from using translated urls by removing the home url from every request.
+// So /de/presse/downloads returns a http 404 because is sees this page as
+// /presse/downloads.
+// We worked around this problem by removing the home url filter which
+// 
+//add_filter('home_url', 'wti_multilang_link_url');
+add_filter('post_link', 'wti_multilang_link_url');
+add_filter('page_link', 'wti_multilang_link_url');
 add_action('wp_ajax_mysugr_wti_add_text_key', 'wti_multilang_ajax_wti_add_text_key');
+add_filter('redirect_canonical', 'wti_multilang_filter_redirect_canonical', 10, 2);
+
+function wti_multilang_filter_redirect_canonical($url, $request) {
+  $languages = wti_multilang_get_languages();
+  $home_url = home_url();
+  foreach ($languages AS $language) {
+    if (trim($request, '/') == $home_url . '/' . $language) {
+      return false;
+    }
+  }
+  return $url;
+}
 
 function wti_multilang_locale($locale) {
   $lang = wti_multilang_get_current_language();
