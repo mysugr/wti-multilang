@@ -107,9 +107,7 @@ function wti_multilang_admin_init() {
   wp_register_style('wtiml-admin-css', plugins_url('css/admin.css', __FILE__));
   wp_enqueue_style('wtiml-admin-css');
 
-  if (wti_multilang_register_translation_usage()) {
-    wp_enqueue_script('wtiml-autocomplete', plugins_url('translations/autocomplete-data.js', __FILE__));
-  }
+  wp_enqueue_script('wtiml-autocomplete', plugins_url('translations/autocomplete-data.js', __FILE__));
 }
 
 function wti_multilang_admin_notices() {
