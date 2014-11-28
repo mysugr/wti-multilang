@@ -426,6 +426,9 @@ function wti_multilang_before_toolbar_render() {
     ));
 
     foreach ($used_translations AS $key => $translation) {
+      if ('error' == $translation['status']) {
+        continue;
+      }
       $title = strlen($translation['text']) > 40 ? substr($translation['text'], 0, 40) . '&hellip;' : $translation['text'];
       $title = '"' . $title . '" - ' . $key . ' (' . $translation['status'] . ')';
       $wp_admin_bar->add_node(array(
