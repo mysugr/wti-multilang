@@ -34,7 +34,8 @@ add_shortcode('wti', 'wti_multilang_shortcode');
 // We worked around this problem by removing the home url filter which
 // has the sideeffect though that home_url() does not return a localized url
 //add_filter('home_url', 'wti_multilang_link_url');
-add_filter('post_link', 'wti_multilang_link_url');
+
+add_filter('post_link', 'wti_multilang_post_link', 10, 2);
 add_filter('page_link', 'wti_multilang_link_url');
 add_action('wp_ajax_mysugr_wti_add_text_key', 'wti_multilang_ajax_wti_add_text_key');
 add_filter('redirect_canonical', 'wti_multilang_filter_redirect_canonical', 10, 2);
@@ -171,6 +172,14 @@ function wti_multilang_get_home_url() {
     $home = get_option('home');
   }
   return $home;
+}
+
+function wti_multilang_post_link($url, $post) {
+  if ('post' == $post->post_type) {
+    $post_language = get_field('language', $post->ID);
+      return wti_multilang_link_url($url, $post_language);
+  }
+  return wti_multilang_link_url($url);
 }
 
 function wti_multilang_link_url($url, $language = '') {
