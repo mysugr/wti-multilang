@@ -326,8 +326,21 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
     }
   }
   else {
-    $translation = 'Error finding translation for key: ' . $key;
-    $status = 'error';
+    if (is_user_logged_in()) {
+      $translation = 'Error finding translation for key: ' . $key;
+      $status = 'error';
+    }
+    else {
+      $en_texts = wti_multilang_get_translation_data('en');
+      if (isset($en_texts[$key])) {
+        $translation = nl2br($en_texts[$key]['text']);
+        $status = $translations[$key]['status'];
+      }
+      else {
+        $translation = '';
+        $status = '';
+      }
+    }
   }
 
   if ('error' === $status) {
