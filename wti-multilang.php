@@ -235,7 +235,7 @@ function wti_multilang_update_wti_data($success_message = 'The translations have
   $api = wti_multilang_api();
   $lang_result = $api->getLanguages();
   if (!is_array($lang_result) || empty($lang_result)) {
-    wti_multilang_message($lang_result, 'updated');
+    wti_multilang_message($lang_result, 'error');
     return false;
   }
   else {
