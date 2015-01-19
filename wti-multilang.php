@@ -234,14 +234,19 @@ function wti_multilang_update_wti_data($success_message = 'The translations have
   $errors = array();
   $api = wti_multilang_api();
   $lang_result = $api->getLanguages();
-  if (!is_array($lang_result)) {
-    $errors[] = $lang_result;
+  if (!is_array($lang_result) || empty($lang_result)) {
+    wti_multilang_message($lang_result, 'updated');
+    return false;
   }
   else {
     update_option('wtiml_languages', $lang_result);
   }
 
   $translations = $api->prepareTranslations($api->getStrings());
+  if (!is_array_($translations) || empty($translations)) {
+    wti_multilang_message($translations, 'error');
+    return FALSE;
+  }
   $strings_result = wti_multilang_save_translations_locally($translations);
   wti_multilang_create_autocomplete_data($translations);
   if ($strings_result !== true) {

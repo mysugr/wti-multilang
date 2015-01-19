@@ -41,8 +41,10 @@ class WtiApi {
         'all' => array(),
         'default' => $project['source_locale']['code'],
       );
-      foreach ($project['target_locales'] AS $locale) {
-        $languages['all'][$locale['code']] = $locale['name'];
+      if (is_array($project) && isset($project['target_locales'])) {
+        foreach ($project['target_locales'] AS $locale) {
+          $languages['all'][$locale['code']] = $locale['name'];
+        }
       }
     }
     return $languages;
@@ -104,14 +106,16 @@ class WtiApi {
     $result = array();
     foreach ($strings AS $lang => $str) {
       $result[$lang] = array();
-      foreach ($str AS $segment) {
-        $result[$lang][$segment['key']] = array(
-          'text' => $segment['translations']['text'],
-          'status' => str_replace('status_', '', $segment['translations']['status']),
-          'version' => $segment['translations']['version'],
-          'id' => $segment['id'],
-          'project' => $segment['project']['id'],
-        );
+      if (is_array($str)) {
+        foreach ($str AS $segment) {
+          $result[$lang][$segment['key']] = array(
+            'text' => $segment['translations']['text'],
+            'status' => str_replace('status_', '', $segment['translations']['status']),
+            'version' => $segment['translations']['version'],
+            'id' => $segment['id'],
+            'project' => $segment['project']['id'],
+          );
+        }
       }
     }
     return $result;
