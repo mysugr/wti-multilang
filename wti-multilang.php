@@ -243,7 +243,7 @@ function wti_multilang_update_wti_data($success_message = 'The translations have
   }
 
   $translations = $api->prepareTranslations($api->getStrings());
-  if (!is_array_($translations) || empty($translations)) {
+  if (!is_array($translations) || empty($translations)) {
     wti_multilang_message($translations, 'error');
     return FALSE;
   }
