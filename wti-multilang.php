@@ -25,7 +25,8 @@ add_action('admin_menu', 'wti_multilang_admin_menu');
 add_action('admin_notices', 'wti_multilang_admin_notices');
 add_action('parse_request', 'wti_multilang_parse_request');
 add_action('wp_before_admin_bar_render', 'wti_multilang_before_toolbar_render');
-add_shortcode('wti', 'wti_multilang_shortcode');
+add_shortcode('t', 'wti_multilang_shortcode_translate');
+add_shortcode('if', 'wti_multilang_shortcode_if_language');
 // NOTE:
 // we needed to remove the home url filter because it basically prevents
 // us from using translated urls by removing the home url from every request.
@@ -290,11 +291,22 @@ function wti_multilang_setup_done() {
   return $api_key !== FALSE && strlen($api_key) > 0 && $languages !== false && isset($languages['default']) && isset($languages['all']) && count($languages['all']) > 0;
 }
 
-function wti_multilang_shortcode($attrs = array(), $content = '') {
+function wti_multilang_shortcode_translate($attrs = array(), $content = '') {
   //[wti]global.save[/wti]
   //[wti attribute]global.save[/wti]
   //[wti]Hello world![/wti]
-  return wti_multilang_get_translation($content, isset($attrs['attribute']));
+  return wti_multilang_get_translation($content, true, array(), isset($attrs['lang']) ? $attrs['lang'] : '');
+}
+
+function wti_multilang_shortcode_if_language($attrs = array(), $content = '') {
+  //[if lang="de"]Cont that's only visible in german[/if]
+  $current_lang = wti_multilang_get_current_language(); 
+  $if_langs = isset($attrs['lang']) ? explode(' ', $attrs['lang']) : array();
+
+  if (empty($if_langs) || in_array($current_lang, $if_langs)) {
+    return $content;
+  }
+  return '';
 }
 
 function wti_multilang_get_translation_data($lang = '') {
