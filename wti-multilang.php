@@ -158,11 +158,20 @@ function wti_multilang_get_current_language() {
   static $lang;
   if (empty($lang)) {
     $langs = get_option('wtiml_languages');
-    $server_url = $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-    $home_without_scheme = preg_replace('/https?:\/\//', '', wti_multilang_get_home_url());
-    $path = str_replace($home_without_scheme, '', $server_url);
-    preg_match('/^\/(' . implode('|', array_keys($langs['all'])) . ')/', $path, $matches);
-    $lang = count($matches) > 1 ? $matches[1] : $langs['default'];
+
+    if (isset($_GET['lang']) && array_key_exists($_GET['lang'], $langs['all'])) {
+      // If the lang get parameter is set use it
+      $lang = $_GET['lang'];
+    }
+    else {
+      // Try to determine the language from the url path prefix and fallback
+      // to the default language if we don't know the given language
+      $server_url = $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+      $home_without_scheme = preg_replace('/https?:\/\//', '', wti_multilang_get_home_url());
+      $path = str_replace($home_without_scheme, '', $server_url);
+      preg_match('/^\/(' . implode('|', array_keys($langs['all'])) . ')/', $path, $matches);
+      $lang = count($matches) > 1 ? $matches[1] : $langs['default'];
+    }
   }
   return $lang;
 }
