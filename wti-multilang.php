@@ -372,7 +372,7 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
   if ('error' === $status) {
     $output = '<span class="wti-error" data-wtiml="' . $key . '">' . $translation . '</span>';
   }
-  elseif {
+  else {
     $output = $translation;
   }
   wti_multilang_register_translation_usage($key);
