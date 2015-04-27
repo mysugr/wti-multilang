@@ -340,9 +340,13 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
     return '';
   }
 
+  if (empty($lang)) {
+    $lang = wti_multilang_get_current_language();
+  }
+
   $translations = wti_multilang_get_translation_data($lang);
 
-  if (isset($translations[$key])) {
+  if (isset($translations[$key]['text']) && !empty($translations[$key]['text'])) {
     $translation = nl2br($translations[$key]['text']);
     $status = $translations[$key]['status'];
     if (!empty($replacements) && is_array($replacements)) {
@@ -353,29 +357,24 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
   }
   else {
     if (is_user_logged_in()) {
-      $translation = 'Error finding translation for key: ' . $key;
+      $translation = 'Missing wti key: ' . $key;
       $status = 'error';
     }
     else {
       $en_texts = wti_multilang_get_translation_data('en');
-      if (isset($en_texts[$key])) {
+      if (isset($en_texts[$key]['text']) && !empty($en_texts[$key]['text'])) {
         $translation = nl2br($en_texts[$key]['text']);
         $status = $en_texts[$key]['status'];
       }
       else {
-        mysugrv3_log('error', 'wti_multilang_get_translation: could not find the translation or en fallback for: ' . $key);
+        mysugrv3_log('error', 'Missing wti key: ' . $key, 'melanie.vollert@mysugr.com');
         $translation = '';
         $status = '';
       }
     }
   }
 
-  if ('error' === $status) {
-    $output = '<span class="wti-error" data-wtiml="' . $key . '">' . $translation . '</span>';
-  }
-  else {
-    $output = $translation;
-  }
+  $output = $translation;
   wti_multilang_register_translation_usage($key);
   return $output;
 }
