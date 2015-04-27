@@ -381,7 +381,7 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
       // Only log one error for each key on a given page.
       $message = 'Url: ' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . "\n";
       $message .= 'Wti key: ' . $key;
-      mysugrv3_log('error', 'Missing wti key: ' . $key, $message, 'martin.wittmann@mysugr.com');
+      mysugrv3_log('error', 'Missing wti key: ' . $key, $message, 'melanie.vollert@mysugr.com');
       $logged_errors[] = $key;
     }
   }
