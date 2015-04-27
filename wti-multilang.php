@@ -367,11 +367,13 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
         $status = $en_texts[$key]['status'];
       }
       else {
-        mysugrv3_log('error', 'Missing wti key: ' . $key, 'melanie.vollert@mysugr.com');
         $translation = '';
         $status = '';
       }
     }
+    $message = 'Url: ' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . "\n";
+    $message .= 'Wti key: ' . $key;
+    mysugrv3_log('error', 'Missing wti key: ' . $key, $message, 'martinw.wittmann@mysugr.com');
   }
 
   $output = $translation;
