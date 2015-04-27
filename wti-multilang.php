@@ -335,6 +335,11 @@ function wti_multilang_get_translation_data($lang = '') {
 }
 
 function wti_multilang_get_translation($key, $hide_status = true, $replacements = array(), $lang = false) {
+  static $logged_errors;
+  if (empty($logged_errors)) {
+    $logged_errors = array();
+  }
+
   $hide_status = true;
   if (empty($key)) {
     return '';
@@ -371,9 +376,14 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
         $status = '';
       }
     }
-    $message = 'Url: ' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . "\n";
-    $message .= 'Wti key: ' . $key;
-    mysugrv3_log('error', 'Missing wti key: ' . $key, $message, 'martinw.wittmann@mysugr.com');
+
+    if (!in_array($key, $logged_errors)) {
+      // Only log one error for each key on a given page.
+      $message = 'Url: ' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . "\n";
+      $message .= 'Wti key: ' . $key;
+      mysugrv3_log('error', 'Missing wti key: ' . $key, $message, 'martinw.wittmann@mysugr.com');
+      $logged_errors[] = $key;
+    }
   }
 
   $output = $translation;
