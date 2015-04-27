@@ -360,9 +360,10 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
       $en_texts = wti_multilang_get_translation_data('en');
       if (isset($en_texts[$key])) {
         $translation = nl2br($en_texts[$key]['text']);
-        $status = $translations[$key]['status'];
+        $status = $en_texts[$key]['status'];
       }
       else {
+        mysugrv3_log('error', 'wti_multilang_get_translation: could not find the translation or en fallback for: ' . $key);
         $translation = '';
         $status = '';
       }
