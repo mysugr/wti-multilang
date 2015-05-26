@@ -486,6 +486,9 @@ function wti_multilang_before_toolbar_render() {
       if ('error' == $translation['status']) {
         continue;
       }
+      if (!isset($translation['id'])) {
+        mysugrv3_log('error', 'translation id missing', $translation);
+      }
       $title = strlen($translation['text']) > 40 ? substr($translation['text'], 0, 40) . '&hellip;' : $translation['text'];
       $title = '"' . $title . '" - ' . $key . ' (' . $translation['status'] . ')';
       $wp_admin_bar->add_node(array(
