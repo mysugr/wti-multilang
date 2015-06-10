@@ -44,8 +44,10 @@ add_filter('redirect_canonical', 'wti_multilang_filter_redirect_canonical', 10, 
 function wti_multilang_filter_redirect_canonical($url, $request) {
   $languages = wti_multilang_get_languages();
   $home_url = home_url();
+
+  $simple_url = preg_replace("/\?.*$/", '', $request);
   foreach ($languages AS $language) {
-    if (trim($request, '/') == $home_url . '/' . $language) {
+    if (trim($simple_url, '/') == $home_url . '/' . $language) {
       return false;
     }
   }
@@ -145,7 +147,7 @@ function wti_multilang_rewrite_rules($rules) {
     'webtranslateit-webhook' => 'index.php?webtranslateit-webhook=1',
   );
 
-  $slug_regex_suffix = '/?(\?=.*)?$';
+  $slug_regex_suffix = '/?(\?\=.*)?$';
 
   $languages = wti_multilang_get_languages();
   $default_language = wti_multilang_get_default_language();
@@ -546,9 +548,6 @@ function wti_multilang_before_toolbar_render() {
     foreach ($used_translations AS $key => $translation) {
       if ('error' == $translation['status']) {
         continue;
-      }
-      if (!isset($translation['id'])) {
-        mysugrv3_log('error', 'translation id missing', $translation);
       }
       $title = strlen($translation['text']) > 40 ? substr($translation['text'], 0, 40) . '&hellip;' : $translation['text'];
       $title = '"' . $title . '" - ' . $key . ' (' . $translation['status'] . ')';
