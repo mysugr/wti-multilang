@@ -144,6 +144,67 @@ function wti_multilang_rewrite_rules($rules) {
   $new_rules = array(
     'webtranslateit-webhook' => 'index.php?webtranslateit-webhook=1',
   );
+
+  $slug_regex_suffix = '/?(\?=.*)?$';
+
+  $languages = wti_multilang_get_languages();
+  $default_language = wti_multilang_get_default_language();
+  $front_page = get_option('page_on_front');
+
+  foreach ($languages AS $language) {
+    if ($default_language == $language) {
+      continue;
+    }
+    $new_rules[$language . $slug_regex_suffix] = 'index.php?page_id=' . $front_page;
+  }
+
+  $pages = get_posts(array(
+    'post_type' => 'page',
+    'posts_per_page' => -1,
+    'post__not_in' => array($front_page),
+  ));
+  foreach ($pages AS $page) {
+    foreach ($languages AS $language) {
+      $slug = mysugrv3_get_localized_url_for_post($page, $language);
+      if (false !== $slug) {
+        $new_rules[trim($slug, '/') . $slug_regex_suffix] = 'index.php?page_id=' . $page->ID;
+      }
+    }
+  }
+
+  $posts = get_posts(array(
+    'post_type' => 'post',
+    'posts_per_page' => -1,
+    'post_status' => array(
+      'publish',
+      'private',
+    ),
+  ));
+
+  foreach ($posts AS $post) {
+    $post->language = get_field('language', $post->ID);
+    switch ($post->language) {
+      case 'en':
+        foreach ($languages AS $lang) {
+          if ('de' == $lang) {
+            // We're showing english posts in the blog pages of all languages
+            // except german.
+            continue;
+          }
+          $slug = $lang . '/' . $post->post_name;
+          $new_rules[$slug . $slug_regex_suffix] = 'index.php?p=' . $post->ID;
+        }
+        break;
+      case 'de':
+      case 'fr':
+      case 'it':
+        $slug = $post->language . '/' . $post->post_name;
+        $new_rules[$slug . $slug_regex_suffix] = 'index.php?p=' . $post->ID;
+        break;
+      default:
+        mysugrv3_log('error', 'mysugrv3_rewrite_rules: no language set for: ', $post, 'martin.wittmann@mysugr.com');
+    }
+  }
   return $new_rules + $rules;
 }
 
@@ -381,7 +442,7 @@ function wti_multilang_get_translation($key, $hide_status = true, $replacements 
       // Only log one error for each key on a given page.
       $message = 'Url: ' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . "\n";
       $message .= 'Wti key: ' . $key;
-      mysugrv3_log('error', 'Missing wti key: ' . $key, $message);//, 'melanie.vollert@mysugr.com');
+      mysugrv3_log('error', 'Missing wti key: ' . $key, $message);
       $logged_errors[] = $key;
     }
   }
