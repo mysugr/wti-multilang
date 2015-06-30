@@ -376,7 +376,7 @@ function wti_multilang_shortcode_if_language($attrs = array(), $content = '') {
   $if_langs = isset($attrs['lang']) ? explode(' ', $attrs['lang']) : array();
 
   if (empty($if_langs) || in_array($current_lang, $if_langs)) {
-    return $content;
+    return do_shortcode($content);
   }
   return '';
 }
