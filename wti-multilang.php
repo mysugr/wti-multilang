@@ -231,7 +231,7 @@ function wti_multilang_parse_request($wp) {
     Right now we can't think of any other case where this would/should happen.
   */
   if (isset($wp->query_vars['p']) && isset($wp->query_vars['page_id']) && isset($wp->query_vars['preview'])) {
-    //unset($wp->query_vars['page_id']);
+    unset($wp->query_vars['page_id']);
   }
 
   if (isset($wp->query_vars['webtranslateit-webhook'])) {
