@@ -139,6 +139,7 @@ function wti_multilang_get_api_key($type) {
 function wti_multilang_query_vars($qv) {
   $qv[] = 'lang';
   $qv[] = 'webtranslateit-webhook';
+  $qv[] = 'mysugr_page';
   return $qv;
 }
 
@@ -152,7 +153,9 @@ function wti_multilang_rewrite_rules($rules) {
   $languages = wti_multilang_get_languages();
   $default_language = wti_multilang_get_default_language();
   $front_page = get_option('page_on_front');
+  $blog_overview_page_id = get_option('page_for_posts');
 
+  // Add front page in alle language except the default one (there's no lang prefix in this case)
   foreach ($languages AS $language) {
     if ($default_language == $language) {
       continue;
@@ -160,10 +163,16 @@ function wti_multilang_rewrite_rules($rules) {
     $new_rules[$language . $slug_regex_suffix] = 'index.php?page_id=' . $front_page;
   }
 
+  // Add the blog overview page separately because we need our own pagination (e.g. /diabetes-life/2)
+  foreach ($languages AS $language) {
+    $slug = mysugrv3_get_localized_url_for_post(get_post($blog_overview_page_id), $language);
+    $new_rules[trim($slug, '/') . '/([0-9]+)?' . $slug_regex_suffix] = 'index.php?page_id=' . $blog_overview_page_id . '&mysugr_page=$matches[1]';
+  }
+
   $pages = get_posts(array(
     'post_type' => 'page',
     'posts_per_page' => -1,
-    'post__not_in' => array($front_page),
+    'post__not_in' => array($front_page, $blog_overview_page_id),
   ));
   foreach ($pages AS $page) {
     foreach ($languages AS $language) {
@@ -204,7 +213,7 @@ function wti_multilang_rewrite_rules($rules) {
         $new_rules[$slug . $slug_regex_suffix] = 'index.php?p=' . $post->ID;
         break;
       default:
-        mysugrv3_log('error', 'mysugrv3_rewrite_rules: no language set for: ', $post, 'martin.wittmann@mysugr.com');
+        mysugrv3_log('error', 'mysugrv3_rewrite_rules: no language set for: ', $post);
     }
   }
   return $new_rules + $rules;
@@ -255,6 +264,12 @@ function wti_multilang_post_link($url, $post) {
   return wti_multilang_link_url($url);
 }
 
+/*
+  TODO:
+    handle localized urls correctly
+    right now only the language prefix is changed for url localization
+    but in the case of a localied url slug (e.g. /de/tagebuch vs. /logbook) this would fail
+*/
 function wti_multilang_link_url($url, $language = '') {
   $languages = get_option('wtiml_languages');
   if (count($languages) < 1) {
