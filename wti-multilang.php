@@ -166,7 +166,7 @@ function wti_multilang_rewrite_rules($rules) {
   // Add the blog overview page separately because we need our own pagination (e.g. /diabetes-life/2)
   foreach ($languages AS $language) {
     $slug = mysugrv3_get_localized_url_for_post(get_post($blog_overview_page_id), $language);
-    $new_rules[trim($slug, '/') . '/([0-9]+)?' . $slug_regex_suffix] = 'index.php?page_id=' . $blog_overview_page_id . '&mysugr_page=$matches[1]';
+    $new_rules[trim($slug, '/') . '/?([0-9]+)?' . $slug_regex_suffix] = 'index.php?page_id=' . $blog_overview_page_id . '&mysugr_page=$matches[1]';
   }
 
   $pages = get_posts(array(
@@ -220,8 +220,6 @@ function wti_multilang_rewrite_rules($rules) {
 }
 
 function wti_multilang_parse_request($wp) {
-  global $wp_rewrite;
-
   /*
     Saving german blog posts as draft and the previewing it caused a 404 error
     because wp got both a pade id and a post id and then tried to query posts
