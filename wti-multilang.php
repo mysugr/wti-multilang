@@ -220,6 +220,22 @@ function wti_multilang_rewrite_rules($rules) {
 }
 
 function wti_multilang_parse_request($wp) {
+  global $wp_rewrite;
+
+  /*
+    Saving german blog posts as draft and the previewing it caused a 404 error
+    because wp got both a pade id and a post id and then tried to query posts
+    (meaning a post_type == 'post') with the given page id which results in no
+    posts found and therefor a 404 error.
+
+    We work around that problem by unsetting the page id if both a post id and
+    pade id are set as query parameters.
+    Right now we can't think of any other case where this would/should happen.
+  */
+  if (isset($wp->query_vars['p']) && isset($wp->query_vars['page_id']) && isset($wp->query_vars['preview'])) {
+    //unset($wp->query_vars['page_id']);
+  }
+
   if (isset($wp->query_vars['webtranslateit-webhook'])) {
     wti_multilang_webhook_handler();
     wp_die();
