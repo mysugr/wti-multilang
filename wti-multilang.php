@@ -152,7 +152,7 @@ function wti_multilang_rewrite_rules($rules) {
 
   $languages = wti_multilang_get_languages();
   $default_language = wti_multilang_get_default_language();
-  $front_page = get_option('page_on_front');
+  $front_page_id = get_option('page_on_front');
   $blog_overview_page_id = get_option('page_for_posts');
 
   // Add front page in alle language except the default one (there's no lang prefix in this case)
@@ -160,7 +160,7 @@ function wti_multilang_rewrite_rules($rules) {
     if ($default_language == $language) {
       continue;
     }
-    $new_rules[$language . $slug_regex_suffix] = 'index.php?page_id=' . $front_page;
+    $new_rules[$language . $slug_regex_suffix] = 'index.php?page_id=' . $front_page_id;
   }
 
   // Add the blog overview page separately because we need our own pagination (e.g. /diabetes-life/2)
@@ -172,7 +172,7 @@ function wti_multilang_rewrite_rules($rules) {
   $pages = get_posts(array(
     'post_type' => 'page',
     'posts_per_page' => -1,
-    'post__not_in' => array($front_page, $blog_overview_page_id),
+    'post__not_in' => array($front_page_id, $blog_overview_page_id),
   ));
   foreach ($pages AS $page) {
     foreach ($languages AS $language) {
