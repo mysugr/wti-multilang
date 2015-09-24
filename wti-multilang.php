@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 include_once(dirname(__FILE__) . '/settings.php');
- 
+
 register_activation_hook(__FILE__, 'wti_multilang_install');
 
 add_filter('locale', 'wti_multilang_locale', 1);
@@ -169,6 +169,7 @@ function wti_multilang_rewrite_rules($rules) {
     $new_rules[trim($slug, '/') . '/?([0-9]+)?' . $slug_regex_suffix] = 'index.php?page_id=' . $blog_overview_page_id . '&mysugr_page=$matches[1]';
   }
 
+  // Add a rewrite rule for every page
   $pages = get_posts(array(
     'post_type' => 'page',
     'posts_per_page' => -1,
@@ -183,6 +184,7 @@ function wti_multilang_rewrite_rules($rules) {
     }
   }
 
+  // Add a rewrite rule for every post
   $posts = get_posts(array(
     'post_type' => 'post',
     'posts_per_page' => -1,
@@ -216,6 +218,20 @@ function wti_multilang_rewrite_rules($rules) {
         mysugrv3_log('error', 'mysugrv3_rewrite_rules: no language set for: ', $post);
     }
   }
+
+
+  // Add a rewrite rule for every author
+  $authors = get_users();
+
+  foreach($authors as $author) {
+    foreach($languages as $language) {
+      $slug = mysugrv3_get_localized_url_for_author($author, $language);
+      $slug.= '(?:/(\d+))?';
+
+      $new_rules[$slug . $slug_regex_suffix] = 'index.php?author_name=' . $author->data->user_nicename . '&mysugr_page=$matches[1]';
+    }
+  }
+
   return $new_rules + $rules;
 }
 
@@ -305,7 +321,7 @@ function wti_multilang_link_url($url, $language = '') {
 }
 
 function wti_multilang_admin_menu() {
-  add_menu_page('Setup', 'WTI Multilang', 'manage_options', 'wti-multilang', 'wti_multilang_page_admin'); 
+  add_menu_page('Setup', 'WTI Multilang', 'manage_options', 'wti-multilang', 'wti_multilang_page_admin');
 }
 
 function wti_multilang_page_admin() {
@@ -401,7 +417,7 @@ function wti_multilang_shortcode_translate($attrs = array(), $content = '') {
 
 function wti_multilang_shortcode_if_language($attrs = array(), $content = '') {
   //[if lang="de"]Cont that's only visible in german[/if]
-  $current_lang = wti_multilang_get_current_language(); 
+  $current_lang = wti_multilang_get_current_language();
   $if_langs = isset($attrs['lang']) ? explode(' ', $attrs['lang']) : array();
 
   if (empty($if_langs) || in_array($current_lang, $if_langs)) {
@@ -414,7 +430,7 @@ function wti_multilang_get_translation_data($lang = '') {
   static $translations;
 
   if (empty($lang)) {
-    $lang = wti_multilang_get_current_language(); 
+    $lang = wti_multilang_get_current_language();
   }
 
   if (!isset($translations[$lang])) {
@@ -517,7 +533,7 @@ function wti_multilang_get_all_translations($language = '') {
   }
 
   if (empty($language)) {
-    $language = wti_multilang_get_current_language(); 
+    $language = wti_multilang_get_current_language();
   }
   if (!isset($translations[$language])) {
     $translations[$language] = array();
