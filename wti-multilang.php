@@ -297,7 +297,7 @@ function wti_multilang_link_url($url, $language = '') {
   $home = wti_multilang_get_home_url();
 
   $path = str_replace($home, '', $url);
-  $pattern = '/^\/(' . implode('|', array_keys($languages['all'])) . ')\//';
+  $pattern = '/^\/(' . implode('|', array_keys($languages['all'])) . ')/';
   $path = preg_replace($pattern, '', $path);
 
   $result = $home . ($language != $languages['default'] ? '/' . $language : '') . $path;
